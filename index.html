@@ -4,374 +4,1128 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<meta content="SonicWeave audio generation demo: unified sub-task coverage and complex multi-element scene generation." name="description"/>
-<title>SonicWeave — Audio Generation Demo</title>
+<meta content="SonicWeave: chunk-routed mixture-of-experts for unified audio scene generation." name="description"/>
+<title>SonicWeave — Unified Audio Scene Generation</title>
 <style>
-    :root {
-      --ink: #172033;
-      --muted: #647089;
-      --line: #e4e9f2;
-      --paper: #f7f9fc;
-      --card: #ffffff;
-      --blue: #4263eb;
-      --blue-soft: #eef2ff;
-      --cyan: #0f9bb5;
-      --violet: #7257d9;
-      --shadow: 0 18px 50px rgba(36, 52, 88, .08);
-      --radius: 22px;
-    }
-
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      color: var(--ink);
-      background: var(--paper);
-      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.55;
-    }
-    a { color: inherit; }
-    .shell { width: min(1440px, calc(100% - 48px)); margin: 0 auto; }
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      padding: 86px 0 76px;
-      color: #fff;
-      background:
-        radial-gradient(circle at 12% 20%, rgba(95, 137, 255, .38), transparent 32%),
-        radial-gradient(circle at 90% 4%, rgba(41, 212, 203, .25), transparent 28%),
-        linear-gradient(135deg, #111b3a 0%, #1d2f67 54%, #183a62 100%);
-    }
-    .hero::after {
-      content: "";
-      position: absolute;
-      width: 620px;
-      height: 620px;
-      right: -210px;
-      bottom: -390px;
-      border: 1px solid rgba(255,255,255,.18);
-      border-radius: 50%;
-      box-shadow: 0 0 0 34px rgba(255,255,255,.04), 0 0 0 68px rgba(255,255,255,.035);
-    }
-    .eyebrow, .section-kicker {
-      margin: 0 0 14px;
-      color: #8aa9ff;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-    }
-    .hero h1 {
-      max-width: 1180px;
-      margin: 0;
-      font-size: clamp(32px, 4.5vw, 58px);
-      letter-spacing: -.055em;
-      line-height: 1.02;
-    }
-    .hero h1 span { color: #91e8e1; }
-    .hero-copy {
-      max-width: 720px;
-      margin: 24px 0 0;
-      color: #d5def8;
-      font-size: clamp(17px, 2vw, 21px);
-    }
-    .hero-nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 34px; }
-    .hero-nav a {
-      padding: 9px 15px;
-      border: 1px solid rgba(255,255,255,.19);
-      border-radius: 999px;
-      color: #edf2ff;
-      font-size: 13px;
-      text-decoration: none;
-      background: rgba(255,255,255,.08);
-      transition: background .2s, transform .2s;
-    }
-    .hero-nav a:hover { background: rgba(255,255,255,.17); transform: translateY(-2px); }
-
-    main { padding: 76px 0 110px; }
-    section { scroll-margin-top: 24px; }
-    section + section { margin-top: 90px; }
-    .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 520px); gap: 36px; align-items: end; margin-bottom: 28px; }
-    .section-head h2 { margin: 0; font-size: clamp(24px, 3vw, 36px); letter-spacing: -.04em; line-height: 1.1; }
-    .section-head p { margin: 0; color: var(--muted); font-size: 16px; }
-    .section-kicker { color: var(--blue); margin-bottom: 11px; }
-
-    .showcase {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-    }
-    .task-card, .comparison {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--card);
-      box-shadow: var(--shadow);
-    }
-    .task-card { display: flex; min-width: 0; flex-direction: column; overflow: hidden; }
-    .task-top { min-height: 120px; padding: 16px 18px 14px; background: linear-gradient(145deg, #fff 0%, #f5f7ff 100%); }
-    .task-index { color: var(--blue); font-size: 12px; font-weight: 800; letter-spacing: .12em; }
-    .task-card h3 { margin: 8px 0 7px; font-size: 15px; letter-spacing: -.025em; }
-    .badge { display: inline-block; padding: 4px 9px; border-radius: 999px; color: #53617a; background: #e9edf7; font-size: 11px; font-weight: 700; }
-    .caption { flex: 1; min-height: 120px; padding: 16px; color: #39445b; font-size: 14px; }
-    .caption strong { display: block; margin-bottom: 7px; color: var(--ink); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
-    .caption em { display: block; margin-top: 12px; color: #7b869d; font-size: 12px; font-style: normal; }
-    .audio-box { padding: 16px 18px 18px; border-top: 1px solid var(--line); background: #fbfcff; }
-    audio { display: block; width: 100%; height: 38px; }
-    .audio-label { margin: 0 0 8px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-    .audio-stack { display: grid; gap: 13px; }
-    .audio-stack .audio-item + .audio-item { padding-top: 12px; border-top: 1px dashed var(--line); }
-
-    .comparison { overflow: hidden; }
-    .comparison-head, .comparison-row { display: grid; grid-template-columns: minmax(260px, 1.55fr) repeat(3, minmax(150px, 1fr)); }
-    .comparison-head { color: #fff; background: linear-gradient(100deg, #25366e, #4263eb); }
-    .comparison-head > div { padding: 17px 20px; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-    .comparison-head > div:not(:first-child) { border-left: 1px solid rgba(255,255,255,.17); }
-    .comparison-row { border-top: 1px solid var(--line); }
-    .comparison-row:first-of-type { border-top: 0; }
-    .prompt-cell { padding: 22px 20px; background: #fbfcff; }
-    .case-number { color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-    .prompt-cell h3 { margin: 7px 0 9px; font-size: 16px; line-height: 1.35; }
-    .prompt-cell p { margin: 0; color: var(--muted); font-size: 13px; }
-    .model-cell { display: flex; min-width: 0; flex-direction: column; justify-content: center; gap: 11px; padding: 18px 16px; border-left: 1px solid var(--line); }
-    .model-cell.sonic { background: linear-gradient(180deg, #f5f7ff, #f0fbfa); }
-    .model-name { font-size: 12px; font-weight: 800; }
-    .model-note { color: var(--muted); font-size: 11px; line-height: 1.35; }
-    .model-cell audio { height: 34px; }
-    .comparison-foot { padding: 16px 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; background: #fff; }
-    .comparison-foot code { color: var(--blue); font-family: inherit; font-weight: 700; }
-
-    footer { padding: 28px 0 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; text-align: center; }
-    @media (max-width: 1100px) {
-      .showcase { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .section-head { grid-template-columns: 1fr; gap: 12px; }
-    }
-    @media (max-width: 760px) {
-      .shell { width: min(100% - 28px, 600px); }
-      .hero { padding: 58px 0 54px; }
-      main { padding-top: 52px; }
-      section + section { margin-top: 64px; }
-      .showcase { grid-template-columns: 1fr; }
-      .task-top { min-height: auto; }
-      .comparison { overflow-x: auto; }
-      .comparison-head, .comparison-row { min-width: 840px; }
-      .comparison-foot { min-width: 840px; }
-    }
-  
-
-.structured-prompt {
-  margin-top: 12px;
-  border-top: 1px dashed var(--line, #e4e9f2);
-  padding-top: 10px;
+:root {
+  --ink:#172033;
+  --ink-soft:#34415a;
+  --muted:#687389;
+  --line:#e1e6ef;
+  --paper:#f6f8fb;
+  --card:#fff;
+  --blue:#3659d9;
+  --blue-dark:#243e9d;
+  --blue-soft:#eef2ff;
+  --green-soft:#eef9f5;
+  --shadow:0 8px 24px rgba(30,44,76,.065);
+  --radius:14px;
+  --content:1480px;
 }
-.structured-prompt summary {
-  cursor: pointer;
-  color: var(--blue, #4263eb);
-  font-size: 12px;
-  font-weight: 800;
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  margin:0;
+  color:var(--ink);
+  background:var(--paper);
+  font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
 }
-.structured-prompt .structured-note {
-  margin: 8px 0 0;
-  color: var(--muted, #647089);
-  font-size: 11px;
+img { max-width:100%; }
+a { color:inherit; }
+.shell { width:min(var(--content),calc(100% - 40px)); margin:0 auto; }
+
+/* Compact paper-style header */
+.paper-header {
+  padding:34px 0 25px;
+  border-bottom:1px solid var(--line);
+  background:
+    radial-gradient(circle at 12% 0%,rgba(66,99,235,.08),transparent 28%),
+    radial-gradient(circle at 90% 10%,rgba(15,155,181,.07),transparent 25%),
+    #fff;
+  text-align:center;
 }
-.structured-prompt pre {
-  margin: 9px 0 0;
-  padding: 11px 12px;
-  overflow-x: auto;
-  border: 1px solid var(--line, #e4e9f2);
-  border-radius: 10px;
-  background: #f7f9fc;
-  color: #39445b;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+.venue-label {
+  margin:0 0 8px;
+  color:var(--blue);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.paper-title {
+  max-width:1250px;
+  margin:0 auto;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:clamp(29px,4.2vw,46px);
+  line-height:1.08;
+  letter-spacing:-.03em;
+}
+.paper-title .accent { color:var(--blue-dark); }
+.authors {
+  max-width:1120px;
+  margin:15px auto 0;
+  color:var(--ink-soft);
+  font-size:13px;
+  line-height:1.6;
+}
+.authors a { color:var(--blue-dark); text-decoration:none; }
+.affiliations { margin-top:5px; color:var(--muted); font-size:11.5px; line-height:1.45; }
+.author-note { margin-top:3px; color:#7a8497; font-size:10.5px; }
+.button-row {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:7px;
+  margin-top:13px;
+}
+.button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:32px;
+  padding:6px 13px;
+  border:1px solid #cbd3e1;
+  border-radius:999px;
+  background:#fff;
+  font-size:11.5px;
+  font-weight:750;
+  text-decoration:none;
+}
+.button.primary { color:#fff; border-color:var(--blue); background:linear-gradient(135deg,var(--blue-dark),var(--blue)); }
+.button.disabled { opacity:.48; pointer-events:none; }
+.abstract {
+  max-width:1340px;
+  margin:14px auto 0;
+  color:var(--ink-soft);
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:15px;
+  line-height:1.55;
+  text-align:left;
+}
+.abstract strong { color:var(--ink); }
+
+/* Compact sticky nav */
+.site-nav {
+  position:sticky;
+  z-index:20;
+  top:0;
+  border-bottom:1px solid rgba(218,225,238,.92);
+  background:rgba(255,255,255,.93);
+  backdrop-filter:blur(12px);
+}
+.site-nav .shell {
+  display:flex;
+  gap:4px;
+  overflow-x:auto;
+  padding:6px 0;
+  scrollbar-width:none;
+}
+.site-nav .shell::-webkit-scrollbar { display:none; }
+.site-nav a {
+  flex:0 0 auto;
+  padding:5px 9px;
+  border-radius:999px;
+  color:var(--muted);
+  font-size:10.5px;
+  font-weight:750;
+  text-decoration:none;
+}
+.site-nav a:hover { color:var(--blue-dark); background:var(--blue-soft); }
+
+main { padding:28px 0 64px; }
+section { scroll-margin-top:58px; }
+section + section { margin-top:48px; }
+.section-head {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(260px,430px);
+  gap:24px;
+  align-items:end;
+  margin-bottom:15px;
+}
+.section-kicker {
+  margin:0 0 4px;
+  color:var(--blue);
+  font-size:9.5px;
+  font-weight:850;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+}
+.section-head h2 {
+  margin:0;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:clamp(23px,3vw,32px);
+  line-height:1.12;
+  letter-spacing:-.025em;
+}
+.section-head > p { margin:0; color:var(--muted); font-size:12px; }
+
+/* Teaser + method in one dense row */
+.figure-grid {
+  display:grid;
+  grid-template-columns:.93fr 1.07fr;
+  gap:12px;
+}
+/* .figure-card {
+  overflow:hidden;
+  margin:0;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  box-shadow:var(--shadow);
+}
+.figure-frame {
+  display:grid;
+  place-items:center;
+  min-height:190px;
+  padding:10px;
+  background:linear-gradient(145deg,#fff,#f5f7fb);
+} */
+.figure-card {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
 }
 
+.figure-frame {
+  padding: 0;
+  background: transparent;
+}
+.figure-frame img {
+  display:block;
+  width:100%;
+  max-height:410px;
+  object-fit:contain;
+}
+.image-fallback {
+  display:none;
+  width:100%;
+  min-height:170px;
+  place-items:center;
+  padding:18px;
+  border:1px dashed #bdc7d8;
+  border-radius:10px;
+  color:var(--muted);
+  background:#f8faff;
+  text-align:center;
+  font-size:11px;
+}
+.figure-caption {
+  padding:9px 11px 10px;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  font-size:10.5px;
+  line-height:1.42;
+}
+.figure-caption strong { color:var(--ink); }
+.method-strip {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+.method-pill {
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:11px;
+  background:#fff;
+  box-shadow:0 4px 14px rgba(30,44,76,.04);
+}
+.method-pill strong { display:block; margin-bottom:2px; font-size:11px; }
+.method-pill span { color:var(--muted); font-size:10px; line-height:1.35; }
+
+/* Task blocks with metrics aside */
+.task-section + .task-section { margin-top:28px; }
+.task-title-row {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:10px;
+}
+.task-title-row h3 {
+  margin:0;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:20px;
+  letter-spacing:-.02em;
+}
+.task-title-row p {
+  max-width:620px;
+  margin:0;
+  color:var(--muted);
+  font-size:10.5px;
+  text-align:right;
+}
+.task-with-metrics {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 330px;
+  gap:12px;
+  align-items:start;
+}
+.sample-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.sample-grid.one { grid-template-columns:1fr; }
+.sample-card {
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:var(--shadow);
+}
+.sample-header {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:8px;
+  padding:9px 11px 7px;
+  background:linear-gradient(150deg,#fff,#f5f7ff);
+}
+.sample-header h4 { margin:0; font-size:12.5px; letter-spacing:-.01em; }
+.sample-id {
+  margin-top:1px;
+  color:var(--muted);
+  font:9.5px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.badge {
+  flex:0 0 auto;
+  padding:3px 7px;
+  border-radius:999px;
+  color:#4e5a70;
+  background:#e9edf7;
+  font-size:8.5px;
+  font-weight:800;
+}
+.prompt {
+  flex:1;
+  padding:9px 11px;
+  color:var(--ink-soft);
+  font-size:10.8px;
+  line-height:1.45;
+}
+.prompt p { margin:0; }
+.prompt p + p { margin-top:5px; }
+.prompt-label {
+  display:block;
+  margin-bottom:4px;
+  color:var(--ink);
+  font-size:8.5px;
+  font-weight:850;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.audio-area {
+  padding:8px 10px 10px;
+  border-top:1px solid var(--line);
+  background:#fbfcff;
+}
+.audio-label {
+  margin:0 0 4px;
+  color:var(--muted);
+  font-size:8.5px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+audio { display:block; width:100%; height:31px; }
+.audio-stack { display:grid; gap:7px; }
+.audio-item + .audio-item { padding-top:7px; border-top:1px dashed var(--line); }
+details.structured {
+  margin-top:7px;
+  padding-top:6px;
+  border-top:1px dashed var(--line);
+}
+details.structured summary {
+  cursor:pointer;
+  color:var(--blue-dark);
+  font-size:9.5px;
+  font-weight:800;
+}
+details.structured pre {
+  margin:6px 0 0;
+  padding:8px;
+  overflow-x:auto;
+  border:1px solid var(--line);
+  border-radius:8px;
+  color:#39445b;
+  background:#f7f9fc;
+  white-space:pre-wrap;
+  word-break:break-word;
+  font:9px/1.42 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+
+/* Metric placeholders */
+.metrics-card {
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:var(--shadow);
+}
+.metrics-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:9px 10px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(135deg,#f5f7ff,#f0fbf8);
+}
+.metrics-head strong { font-size:11px; }
+.metrics-head span { color:var(--muted); font-size:8.5px; text-transform:uppercase; letter-spacing:.08em; }
+.metric-table {
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  font-size:9.5px;
+}
+.metric-table th,
+.metric-table td {
+  padding:6px 5px;
+  border-bottom:1px solid #edf0f5;
+  text-align:center;
+  vertical-align:middle;
+}
+.metric-table th:first-child,
+.metric-table td:first-child { width:34%; text-align:left; padding-left:9px; }
+.metric-table thead th {
+  color:#566177;
+  background:#fbfcff;
+  font-size:8.5px;
+  font-weight:800;
+}
+.metric-table tbody tr:last-child td { border-bottom:0; }
+.metric-table .ours { color:var(--blue-dark); font-weight:800; background:#f7f8ff; }
+.metric-placeholder {
+  padding:8px 10px;
+  border-top:1px dashed var(--line);
+  color:var(--muted);
+  background:#fbfcff;
+  font-size:9px;
+  line-height:1.4;
+}
+.metric-placeholder code { color:var(--blue-dark); }
+
+/* Comparisons: preserve all original rows, but denser */
+.comparison + .comparison { margin-top:28px; }
+.comparison-box {
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  box-shadow:var(--shadow);
+}
+.comparison-head,
+.comparison-row {
+  display:grid;
+  grid-template-columns:minmax(300px,1.65fr) repeat(3,minmax(145px,1fr));
+}
+.comparison-head {
+  color:#fff;
+  background:linear-gradient(100deg,#25366e,#4263eb);
+}
+.comparison-head > div {
+  padding:9px 11px;
+  font-size:8.5px;
+  font-weight:850;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.comparison-head > div:not(:first-child) { border-left:1px solid rgba(255,255,255,.18); }
+.comparison-row { border-top:1px solid var(--line); }
+.comparison-prompt { padding:10px 11px; background:#fbfcff; }
+.comparison-prompt p { margin:0; color:var(--ink-soft); font-size:10px; line-height:1.42; }
+.case-number {
+  margin-bottom:3px;
+  color:var(--blue);
+  font-size:8.5px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.model-cell {
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  justify-content:center;
+  gap:5px;
+  padding:9px;
+  border-left:1px solid var(--line);
+}
+.model-cell.sonic { background:linear-gradient(180deg,#f5f7ff,#f0fbf8); }
+.model-name { font-size:9.5px; font-weight:850; }
+.model-note { color:var(--muted); font-size:8.5px; line-height:1.3; }
+.model-cell audio { height:29px; }
+.comparison-foot {
+  padding:8px 11px;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  background:#fff;
+  font-size:9.5px;
+}
+.trace-inline {
+  margin-top:7px;
+  padding-top:6px;
+  border-top:1px dashed var(--line);
+}
+.trace-inline summary {
+  cursor:pointer;
+  color:var(--blue-dark);
+  font-size:9.5px;
+  font-weight:800;
+}
+.trace-inline figure {
+  margin:7px 0 0;
+  padding:7px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+}
+.trace-inline img {
+  display:block;
+  width:100%;
+  max-height:320px;
+  object-fit:contain;
+}
+.trace-inline figcaption {
+  margin-top:5px;
+  color:var(--muted);
+  font-size:8.5px;
+  line-height:1.35;
+}
+.editor-note {
+  margin-top:10px;
+  padding:8px 10px;
+  border:1px dashed #bec8d9;
+  border-radius:10px;
+  color:var(--muted);
+  background:#f9fbff;
+  font-size:9.5px;
+}
+footer {
+  padding:18px 0 28px;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  background:#fff;
+  font-size:10px;
+  text-align:center;
+}
+@media (max-width:1050px) {
+  .task-with-metrics { grid-template-columns:1fr; }
+  .metrics-card { max-width:none; }
+}
+@media (max-width:850px) {
+  .section-head { grid-template-columns:1fr; gap:6px; }
+  .figure-grid,.sample-grid,.method-strip { grid-template-columns:1fr; }
+  .task-title-row { display:block; }
+  .task-title-row p { margin-top:4px; text-align:left; }
+}
+@media (max-width:760px) {
+  .shell { width:min(100% - 22px,650px); }
+  .paper-title { font-size:30px; }
+  .paper-header { padding-top:27px; }
+  .comparison-box { overflow-x:auto; }
+  .comparison-head,.comparison-row { min-width:820px; }
+}
+
+
+/* Revised layout: larger standalone figures, compact content, image-based metrics */
+.figure-grid { display:block; }
+.figure-stack { display:block; }
+.figure-stack .figure-card { margin-left:auto; margin-right:auto; }
+.figure-stack .figure-card + .figure-card { margin-top:12px; }
+.figure-stack .teaser-card { max-width:900px; }
+.figure-stack .model-card { max-width:1120px; }
+.figure-stack .teaser-card .figure-frame { min-height:230px; }
+.figure-stack .model-card .figure-frame { min-height:260px; }
+.figure-stack .teaser-card img {
+  width: 90%;
+  max-height: 380px;
+  object-fit: contain;
+}
+.figure-stack .model-card img { max-height:520px; }
+
+.featured-case { margin-top:30px; }
+.featured-case .section-head { margin-bottom:11px; }
+.featured-comparison .comparison-prompt { background:linear-gradient(145deg,#fbfcff,#f5f7ff); }
+
+.metric-image-card {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
+  /* overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:var(--shadow); */
+}
+.metric-image-head {
+  padding:8px 10px;
+  border-bottom:1px solid var(--line);
+  color:var(--ink);
+  background:linear-gradient(135deg,#f5f7ff,#f0fbf8);
+  font-size:10.5px;
+  font-weight:800;
+}
+.metric-image-frame {
+  display:grid;
+  place-items:center;
+  min-height:190px;
+  padding:8px;
+  background:#fff;
+}
+.metric-image-frame img {
+  display:block;
+  width:70%;
+  max-height:300px;
+  object-fit:contain;
+}
+.metric-fallback {
+  min-height:170px;
+  color:#758096;
+  background:#fafbfe;
+}
+.complex-with-metrics { align-items:stretch; }
+.complex-with-metrics .metric-image-card { min-height:100%; }
+
+@media (max-width:850px) {
+  .figure-stack .teaser-card,
+  .figure-stack .model-card { max-width:none; }
+}
+
+
+/* v2 layout refinements */
+.section-head {
+  display:block;
+  margin-bottom:11px;
+}
+.section-head > div { max-width:none; }
+.section-head h2 { max-width:980px; }
+
+/* Featured case: only SonicWeave audio + routing figure */
+.featured-case { margin-top:30px; }
+.case-feature {
+  display:grid;
+  grid-template-columns:minmax(320px,.82fr) minmax(0,1.18fr);
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  box-shadow:var(--shadow);
+}
+.case-feature-copy {
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  padding:15px 16px;
+  background:linear-gradient(145deg,#fff,#f6f8ff);
+}
+.case-feature-copy > p {
+  margin:5px 0 0;
+  color:var(--ink-soft);
+  font-size:11px;
+  line-height:1.48;
+}
+.case-feature-audio {
+  margin-top:auto;
+  padding:12px 0 0;
+  border-top:0;
+  background:transparent;
+}
+.case-feature-figure {
+  display:grid;
+  place-items:center;
+  align-content:center;
+  min-height:330px;
+  margin:0;
+  padding:12px;
+  border-left:1px solid var(--line);
+  background:#fbfcff;
+}
+.case-feature-figure img {
+  display:block;
+  width:100%;
+  max-height:470px;
+  object-fit:contain;
+}
+.case-feature-figure figcaption {
+  width:100%;
+  margin-top:6px;
+  color:var(--muted);
+  font-size:9px;
+  line-height:1.35;
+  text-align:left;
+}
+.trace-fallback { min-height:280px; }
+
+/* Give objective-result images substantially more room */
+.task-with-metrics {
+  grid-template-columns:minmax(300px,.76fr) minmax(460px,1.24fr);
+  gap:12px;
+}
+.task-with-metrics > .sample-grid {
+  grid-template-columns:1fr;
+}
+.metric-image-frame {
+  min-height:330px;
+  padding:10px;
+}
+.metric-image-frame img {
+  max-height:540px;
+}
+.metric-fallback {
+  min-height:310px;
+}
+.complex-with-metrics .metric-image-frame {
+  min-height:390px;
+}
+.complex-with-metrics .metric-image-frame img {
+  width:90%;
+  max-height:590px;
+}
+
+@media (max-width:1050px) {
+  .task-with-metrics {
+    grid-template-columns:minmax(280px,.85fr) minmax(380px,1.15fr);
+  }
+}
+@media (max-width:850px) {
+  .task-with-metrics { grid-template-columns:1fr; }
+  .case-feature { grid-template-columns:1fr; }
+  .case-feature-figure {
+    border-top:1px solid var(--line);
+    border-left:0;
+  }
+}
+
+
+/* Teaser on the left; the three method summaries stacked on the right */
+.teaser-method-row {
+  display:grid;
+  grid-template-columns:minmax(0,1.65fr) minmax(250px,.75fr);
+  gap:14px;
+  align-items:stretch;
+  width:100%;
+  max-width:1120px;
+  margin:0 auto 12px;
+}
+
+.figure-stack .teaser-method-row .teaser-card {
+  width:100%;
+  max-width:none;
+  margin:0;
+}
+
+.teaser-method-row .method-strip {
+  display:grid;
+  grid-template-columns:1fr;
+  grid-template-rows:repeat(3,minmax(0,1fr));
+  gap:8px;
+  height:100%;
+  margin:0;
+}
+
+.teaser-method-row .method-pill {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-height:0;
+}
+
+@media (max-width:850px) {
+  .teaser-method-row {
+    grid-template-columns:1fr;
+  }
+
+  .teaser-method-row .method-strip {
+    grid-template-rows:none;
+  }
+}
+
+.teaser-method-row {
+  grid-template-columns: minmax(0, 1.9fr) minmax(280px, 0.7fr);
+  align-items: stretch;
+}
+
+.teaser-method-row > * {
+  height: 100%;
+}
+
+.teaser-method-row .teaser-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.teaser-method-row .teaser-card .figure-frame {
+  flex: 1;
+}
+
+.teaser-method-row .method-strip {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(3, 1fr);
+  align-content: stretch;
+  height: 100%;
+  margin: 0;
+}
+
+.teaser-method-row .method-pill {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+}
+
+.teaser-method-row .method-pill {
+  padding: 14px 16px;
+
+  background: rgba(54, 89, 217, 0.045);
+  border: none;
+  border-left: 4px solid #3659d9;
+
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.teaser-method-row {
+  max-width: 1380px;
+}
+
+.figure-stack .model-card {
+  max-width: 1380px;
+}
+
+.task-with-metrics {
+  grid-template-columns: 60% 40%;
+}
+
+
+
+/* =========================================================
+   Readability and proximity tuning
+   ========================================================= */
+
+/* General reading size */
+body {
+  font-size:16px;
+  line-height:1.56;
+}
+
+.paper-title {
+  font-size:clamp(30px,3.8vw,46px);
+}
+
+.authors {
+  font-size:14.5px;
+  line-height:1.7;
+}
+
+.affiliations {
+  font-size:14.5px;
+}
+
+.author-note {
+  font-size:14.5px;
+}
+
+.button {
+  min-height:36px;
+  padding:7px 15px;
+  font-size:12.5px;
+}
+
+.abstract {
+  max-width:1340px;
+  font-size:17px;
+  line-height:1.62;
+}
+
+.site-nav a {
+  padding:6px 11px;
+  font-size:12px;
+}
+
+.section-kicker {
+  font-size:11px;
+}
+
+.section-head h2 {
+  font-size:clamp(27px,3vw,36px);
+}
+
+.task-title-row h3 {
+  font-size:23px;
+}
+
+.task-title-row p {
+  font-size:12.5px;
+}
+
+/* Teaser and contribution summaries: closer, aligned, and easier to read */
+.teaser-method-row {
+  grid-template-columns:minmax(0,2.05fr) minmax(400px,.95fr);
+  gap:5px;
+  align-items:stretch;
+}
+
+.figure-stack .teaser-method-row .teaser-card img {
+  width:100%;
+  max-height:410px;
+}
+
+.teaser-method-row .method-strip {
+  gap:5px;
+}
+
+.teaser-method-row .method-pill {
+  justify-content:flex-start;
+  padding:13px 15px;
+  background:linear-gradient(90deg,rgba(54,89,217,.07),rgba(54,89,217,.018));
+  border:none;
+  border-left:3px solid #3659d9;
+  border-radius:3px;
+  box-shadow:none;
+}
+
+.teaser-method-row .method-pill strong {
+  margin-bottom:5px;
+  font-size:15.5px;
+  line-height:1.3;
+}
+
+.teaser-method-row .method-pill span {
+  color:#59667d;
+  font-size:13.5px;
+  line-height:1.52;
+}
+
+/* Figure captions, especially the method description */
+.figure-caption {
+  padding:10px 12px 12px;
+  font-size:13.5px;
+  line-height:1.55;
+}
+
+/* Keep samples and result figures visually close */
+.task-with-metrics {
+  gap:6px;
+}
+
+.sample-grid {
+  gap:8px;
+}
+
+.metric-image-frame {
+  padding:4px;
+}
+
+.metric-image-frame img {
+  width:80%;
+}
+
+/* Sample cards */
+.sample-header {
+  padding:11px 13px 9px;
+}
+
+.sample-header h4 {
+  font-size:14.5px;
+}
+
+.sample-id {
+  font-size:10.5px;
+}
+
+.badge {
+  padding:4px 8px;
+  font-size:10px;
+}
+
+.prompt {
+  padding:11px 13px;
+  font-size:14px;
+  line-height:1.58;
+}
+
+.prompt-label {
+  margin-bottom:5px;
+  font-size:10px;
+}
+
+.audio-area {
+  padding:10px 12px 12px;
+}
+
+.audio-label {
+  font-size:10px;
+}
+
+audio {
+  height:34px;
+}
+
+details.structured summary {
+  font-size:11px;
+}
+
+details.structured pre {
+  padding:9px;
+  font:10.5px/1.48 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+
+/* Result-image headings */
+.metric-image-head {
+  padding:9px 11px;
+  font-size:12.5px;
+}
+
+/* Featured scene */
+.case-number {
+  font-size:10.5px;
+}
+
+.case-feature-copy > p {
+  font-size:13px;
+  line-height:1.55;
+}
+
+.case-feature-figure figcaption {
+  font-size:11px;
+  line-height:1.45;
+}
+
+/* Controlled and external comparisons */
+.comparison-head > div {
+  padding:11px 13px;
+  font-size:10.5px;
+}
+
+.comparison-prompt {
+  padding:12px 13px;
+}
+
+.comparison-prompt p {
+  font-size:12px;
+  line-height:1.5;
+}
+
+.model-cell {
+  gap:7px;
+  padding:11px;
+}
+
+.model-name {
+  font-size:11.5px;
+}
+
+.model-note {
+  font-size:10.5px;
+}
+
+.comparison-foot {
+  padding:10px 13px;
+  font-size:11px;
+}
+
+footer {
+  font-size:11.5px;
+}
+
+@media (max-width:1100px) {
+  .teaser-method-row {
+    grid-template-columns:minmax(0,1.65fr) minmax(350px,.9fr);
+  }
+}
+
+@media (max-width:850px) {
+  body {
+    font-size:15px;
+  }
+
+  .teaser-method-row {
+    grid-template-columns:1fr;
+  }
+
+  .teaser-method-row .method-strip {
+    gap:5px;
+  }
+}
 </style>
 </head>
 <body>
-<header class="hero">
+<header class="paper-header" id="top">
 <div class="shell">
-<p class="eyebrow">SonicWeave · Audio Generation</p>
-<h1><strong>SonicWeave</strong>: Chunk-Routed Mixture-of-Experts for Unified Audio Scene Generation</h1>
-<p class="hero-copy">One model to generate and compose speech, music, and sound effects into coherent, fine-grained audio scenes.</p>
-<nav aria-label="Demo sections" class="hero-nav">
-<a href="#subtasks">Sub-task showcase</a>
-<a href="#ablation">Model ablation</a>
-<a href="#systems">System comparison</a>
-</nav>
+<!-- <p class="venue-label">Audio generation project page</p> -->
+<h1 class="paper-title"><span class="accent">SonicWeave</span>: Chunk-Routed Mixture-of-Experts for Unified Audio Scene Generation</h1>
+<div class="authors">
+<a href="https://github.com/caiyunrui" title="Author homepage">Yunrui Cai</a><sup>1,2,*</sup>,
+      Xu Li<sup>1,†</sup>,
+      Yucheng Zhou<sup>1</sup>,
+      Jinchao Li<sup>1</sup>,
+      Dingdong Wang<sup>2</sup>,
+      Dongchao Yang<sup>2</sup>,
+      Xixin Wu<sup>2</sup>,
+      Chen Zhang<sup>1</sup>,
+      Zhiyong Wu<sup>3</sup>,
+      Pengfei Wan<sup>1</sup>,
+      Helen Meng<sup>2,†</sup>
+<div class="affiliations">
+<sup>1</sup>Kling Team, Kuaishou Technology   
+        <sup>2</sup>The Chinese University of Hong Kong   
+        <sup>3</sup>Shenzhen International Graduate School, Tsinghua University
+      </div>
+<div class="author-note"><sup>*</sup>Work done during an internship at Kuaishou Technology.    <sup>†</sup>Corresponding authors.</div>
+</div>
+<div class="button-row">
+<a class="button" href="#">arXiv</a>
+<a class="button" href="#examples">Audio examples</a>
+</div>
+<p class="abstract">
+<strong>SonicWeave</strong> is a unified flow-matching model for speech, singing, music, sound effects, and their mixtures. Text-conditioned general audio generation is moving beyond isolated speech, music, and sound-effect synthesis toward a single model that can compose them into controllable, coherent audio scenes. This unified setting is particularly challenging: heterogeneous components impose conflicting structural requirements on a shared backbone, while a complex mixed scene may contain locally distinct or overlapping content that demands fine-grained adaptation within the same clip. CPE-MoE combines a global text-and-diffusion prior with local acoustic evidence to route temporally contiguous audio chunks. A learned conflict gate favors the prior when local states are unreliable, while allowing local evidence to influence routing when a region departs from the global scene context. SonicWeave supports broad task coverage and fine-grained composition within complex scenes using a single set of weights. Across TTS, TTA, and TTM benchmarks, SonicWeave consistently improves over controlled Dense and Base-MoE baselines, while complex-scene evaluation demonstrates improved compositional quality and routing analyses reveal content-dependent expert specialization across diffusion phases.
+</p>
 </div>
 </header>
+<nav aria-label="Page sections" class="site-nav">
+<div class="shell"><a href="#overview">Overview</a><a href="#featured-case">Featured case</a><a href="#examples">TTS / TTA / TTM</a><a href="#complex">Complex scenes</a><a href="#controlled">Controlled comparison</a><a href="#systems">External systems</a></div>
+</nav>
 <main class="shell">
-<section id="subtasks">
+<section id="overview">
 <div class="section-head">
 <div>
-<p class="section-kicker">01 · Capability map</p>
-<h2>One interface, five audio sub-tasks</h2>
+<p class="section-kicker">Overview and method</p>
+<h2>Unified audio generation with CPE-MoE</h2>
 </div>
-<p>Representative SonicWeave generations across the source datasets. The speech card includes both English and Mandarin SeedTTS examples.</p>
 </div>
-<div class="showcase">
-<article class="task-card">
-<div class="task-top"><div class="task-index">TASK 01</div><h3>Sound effects</h3><span class="badge">AudioCaps</span></div>
-<div class="caption"><strong>Caption</strong>Horses trotting while wood clanks several times as a woman talks and birds chirp in the background alongside wind blowing into a microphone.<details class="structured-prompt" data-case="audiocaps_104323">
-<summary>Structured prompt · Sound effects · AudioCaps</summary>
-<p class="structured-note">SonicWeave structured input</p>
-<pre>Horses trotting while wood clanks several times as a woman talks and birds chirp in the background alongside wind blowing into a microphone.
-&lt;type&gt;sfx&lt;/type&gt;
-&lt;speaker_count&gt;1&lt;/speaker_count&gt;
-&lt;vocal&gt;a woman talking in the background&lt;/vocal&gt;
-&lt;sfx&gt;horses trotting, wood clanking several times, birds chirping, wind blowing into a microphone&lt;/sfx&gt;
-&lt;texture&gt;multi-source environmental scene with background birds and microphone wind noise&lt;/texture&gt;</pre>
-</details><em>Multi-source environmental sound scene</em></div>
-<div class="audio-box"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/audiocaps_104323.wav"></audio></div>
-</article>
-<article class="task-card">
-<div class="task-top"><div class="task-index">TASK 02</div><h3>Music</h3><span class="badge">MusicCaps</span></div>
-<div class="caption"><strong>Caption</strong>This audio contains someone playing a piece on cello ranging from the low register up into the higher register. This song may be playing during a live performance.<details class="structured-prompt" data-case="musiccaps__3GnNMrDuCs">
-<summary>Structured prompt · Music · MusicCaps</summary>
-<p class="structured-note">SonicWeave structured input</p>
-<pre>This audio contains someone playing a piece on cello ranging from the low register up into the higher register. This song may be playing during a live performance.
-&lt;type&gt;music&lt;/type&gt;
-&lt;music&gt;cello performance ranging from the low register to the higher register&lt;/music&gt;
-&lt;texture&gt;possible live-performance setting&lt;/texture&gt;</pre>
-</details><em>Emotional classical cello</em></div>
-<div class="audio-box"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/musiccaps__3GnNMrDuCs.wav"></audio></div>
-</article>
-<article class="task-card">
-<div class="task-top"><div class="task-index">TASK 03</div><h3>Singing</h3><span class="badge">SongDescriber</span></div>
-<div class="caption"><strong>Caption</strong>A rock song with a country vibe, it has male vocals, drums, and acoustic guitar. It is an upbeat song.<details class="structured-prompt" data-case="song_233">
-<summary>Structured prompt · Singing · SongDescriber</summary>
-<p class="structured-note">SonicWeave structured input</p>
-<pre>A rock song with a country vibe, it has male vocals, drums, and acoustic guitar. It is an upbeat song.
-&lt;type&gt;singing&lt;/type&gt;
-&lt;vocal&gt;male vocals&lt;/vocal&gt;
-&lt;music&gt;upbeat rock song with a country vibe, drums, and acoustic guitar&lt;/music&gt;</pre>
-</details><em>Upbeat rock with a country feel</em></div>
-<div class="audio-box"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/song_233.wav"></audio></div>
-</article>
-<article class="task-card">
-<div class="task-top"><div class="task-index">TASK 04</div><h3>Speech</h3><span class="badge">SeedTTS</span></div>
-<div class="caption"><strong>Text prompts</strong><div>EN · “He didn't consider mending the hole — the stones could fall through any time they wanted.”</div><div style="margin-top:10px">ZH · “尽管是用民间资金办学，但亚奥学校的性质并不单纯。”</div><details class="structured-prompt" data-case="seedtts_en">
-<summary>Structured prompt · Speech · SeedTTS English</summary>
-<p class="structured-note">SonicWeave structured input</p>
-<pre>Plain English speech.
-&lt;type&gt;speech&lt;/type&gt;
-&lt;lang&gt;en&lt;/lang&gt;
-&lt;speech&gt;He didn't consider mending the hole — the stones could fall through any time they wanted.&lt;/speech&gt;
-&lt;speaker_count&gt;1&lt;/speaker_count&gt;
-&lt;vocal&gt;adult English voice, neutral tone&lt;/vocal&gt;</pre>
-</details><details class="structured-prompt" data-case="seedtts_zh">
-<summary>Structured prompt · Speech · SeedTTS Mandarin</summary>
-<p class="structured-note">SonicWeave structured input</p>
-<pre>Plain Mandarin speech.
-&lt;type&gt;speech&lt;/type&gt;
-&lt;lang&gt;zh&lt;/lang&gt;
-&lt;speech&gt;尽管是用民间资金办学，但亚奥学校的性质并不单纯。&lt;/speech&gt;
-&lt;speaker_count&gt;1&lt;/speaker_count&gt;
-&lt;vocal&gt;adult Mandarin voice, neutral tone&lt;/vocal&gt;</pre>
-</details><em>Natural speech in two languages</em></div>
-<div class="audio-box"><div class="audio-stack"><div class="audio-item"><p class="audio-label">English</p><audio controls="" preload="none" src="wavs/seedtts-en_common_voice_en_9559-common_voice_en_9560.wav"></audio></div><div class="audio-item"><p class="audio-label">Mandarin</p><audio controls="" preload="none" src="wavs/seedtts-zh_00004504-00000057.wav"></audio></div></div></div>
-</article>
-<article class="task-card">
-<div class="task-top"><div class="task-index">TASK 05</div><h3>Complex scene</h3><span class="badge">Custom benchmark</span></div>
-<div class="caption"><strong>Natural-language Prompt</strong>In a riverside park, an adult female singer softly sings in Mandarin, “风从桥下慢慢来，带走水面一片白。” Acoustic guitar is gently strummed, while wind, birdsong, bicycle bells, and the distant sound of the park naturally surround her voice.<details class="structured-prompt" data-case="cpe_091">
-<summary>Structured prompt · Complex scene · Riverside park</summary>
-<p class="structured-note">SonicWeave structured input</p>
-<pre>A female singer performs softly in Mandarin with acoustic guitar in a riverside park.
-&lt;type&gt;mixed&lt;/type&gt;
-&lt;lang&gt;zh&lt;/lang&gt;
-&lt;lyrics&gt;风从桥下慢慢来，带走水面一片白。&lt;/lyrics&gt;
-&lt;speaker_count&gt;1&lt;/speaker_count&gt;
-&lt;vocal&gt;adult female singer, soft Mandarin singing&lt;/vocal&gt;
-&lt;music&gt;gently strummed acoustic guitar&lt;/music&gt;
-&lt;sfx&gt;bicycle bells&lt;/sfx&gt;
-&lt;ambience&gt;riverside park with wind, birdsong, and distant park sounds&lt;/ambience&gt;
-&lt;texture&gt;voice naturally surrounded by guitar and park ambience&lt;/texture&gt;</pre>
-</details><em>Singing + music + ambience + effects</em></div>
-<div class="audio-box"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/cpe_091.wav"></audio></div>
-</article>
-<article class="task-card">
-<div class="task-top"><div class="task-index">TASK 05</div><h3>Complex scene</h3><span class="badge">Custom benchmark</span></div>
-<div class="caption"><strong>Natural-language Prompt</strong>During a race, a controlled male engineer says over English radio, “Box this lap; the rear temperatures are climbing.” The strained male driver replies, “Copy, but the steering is vibrating under braking.” “Understood, stay off the inside curb.” Engine roar, wind, tires, and radio pops collide. Calls are somewhat distorted by noise.<details class="structured-prompt" data-case="cpe_074">
-<summary>Structured prompt · Complex scene · Race radio</summary>
-<p class="structured-note">SonicWeave structured input</p>
-<pre>English race-engineer and driver radio dialogue at high speed.
-&lt;type&gt;mixed&lt;/type&gt;
-&lt;lang&gt;en&lt;/lang&gt;
-&lt;speech&gt;Box this lap; the rear temperatures are climbing. / Copy, but the steering is vibrating under braking. / Understood, stay off the inside curb.&lt;/speech&gt;
-&lt;speaker_count&gt;2&lt;/speaker_count&gt;
-&lt;relation&gt;pit engineer advising a race driver&lt;/relation&gt;
-&lt;vocal&gt;controlled male engineer and strained male driver through clipped team radio&lt;/vocal&gt;
-&lt;sfx&gt;Engine roar, wind, tires, and radio pops collide&lt;/sfx&gt;
-&lt;ambience&gt;race car at speed with strong wind trackside&lt;/ambience&gt;
-&lt;texture&gt;driver transmission is noisier and more distorted than the engineer response&lt;/texture&gt;</pre>
-</details><em>English dialogue + racing ambience + effects</em></div>
-<div class="audio-box"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/cpe_074.wav"></audio></div>
-</article>
+<div class="figure-stack">
+<div class="teaser-method-row"><figure class="figure-card teaser-card">
+<div class="figure-frame">
+<img alt="SonicWeave teaser" onerror="showImageFallback(this)" src="Figures/teaser.png"/>
+<div class="image-fallback">Teaser figure</div>
 </div>
-</section>
-<section id="ablation">
-<div class="section-head">
-<div><p class="section-kicker">02 · Controlled comparison</p><h2>Why CPE chunk routing matters</h2></div>
-<p>Matched prompts expose the difference between a dense baseline, token-level Base-MoE routing, and SonicWeave’s chunk routing.</p>
+<!-- <figcaption class="figure-caption"><strong>Teaser.</strong> One structured interface for speech, music, sound effects, ambience, and their acoustic relationships.</figcaption> -->
+</figure><div class="method-strip">
+<div class="method-pill"><strong>Global prior</strong><span>Structured scene text and the diffusion-step embedding summarize what to generate and at which phase. This chunk-independent prior provides a stable expert preference when local acoustic states are still unreliable.</span></div>
+<div class="method-pill"><strong>Local evidence</strong><span>Chunk states pooled after joint self-attention reveal the acoustic content currently emerging in each region. A learned conflict gate lets this evidence influence routing when local content departs from the global scene context.</span></div>
+<div class="method-pill"><strong>Temporally coherent chunk routing</strong><span>One top-K assignment is shared by neighboring frames, while the selected experts still transform the original frame-level states. The chunk is the routing unit—not the representation unit—preserving short-range continuity and fine-grained modeling.</span></div>
+</div></div><figure class="figure-card model-card">
+<div class="figure-frame">
+<img alt="SonicWeave architecture and CPE-MoE" onerror="showImageFallback(this)" src="Figures/model.png"/>
+<div class="image-fallback">SonicWeave architecture figure</div>
 </div>
-<div class="comparison">
-<div class="comparison-head"><div>Natural-language prompt</div><div>Dense</div><div>Base-MoE</div><div>SonicWeave</div></div>
-<div class="comparison-row"><div class="prompt-cell"><p>At a busy airport gate, a female Mandarin PA announcer says, “前往上海的旅客请注意，CA八三七航班现在开始登机。” then repeats in English, “Passengers traveling to Shanghai on flight CA eight three seven may now board through gate twenty-six.” Her formal, slightly nasal voices come through the public-address system. Rolling suitcases, distant boarding beeps, overlapping conversations, and footsteps fill the terminal. Bright reflections from the large hall and PA-system compression color the sound.</p><details class="structured-prompt" data-case="cpe_017">
-<summary>Structured prompt · Airport gate</summary>
-<p class="structured-note">Structured input shared by Dense, Base-MoE, and SonicWeave</p>
-<pre>busy bilingual airport gate announcement with overlapping travelers and rolling suitcases
-&lt;type&gt;speech&lt;/type&gt;
-&lt;lang&gt;zh,en&lt;/lang&gt;
-&lt;speech&gt;前往上海的旅客请注意，CA八三七航班现在开始登机。Passengers traveling to Shanghai on flight CA eight three seven may now board through gate twenty-six.&lt;/speech&gt;
-&lt;speaker_count&gt;1&lt;/speaker_count&gt;
-&lt;vocal&gt;Mandarin female PA announcer followed by English, formal broadcast diction, slightly nasal loudspeaker tone&lt;/vocal&gt;
-&lt;ambience&gt;busy airport terminal, suitcase wheels, distant boarding beeps, overlapping conversations, footsteps on polished floor&lt;/ambience&gt;
-&lt;texture&gt;PA system compression, bright reflections from large hall&lt;/texture&gt;</pre>
-</details></div><div class="model-cell"><div class="model-name">Dense</div><div class="model-note">1B dense baseline</div><audio controls="" preload="none" src="wavs/dense_017.wav"></audio></div><div class="model-cell"><div class="model-name">Base-MoE</div><div class="model-note">Token-level audio routing</div><audio controls="" preload="none" src="wavs/basemoe_017.wav"></audio></div><div class="model-cell sonic"><div class="model-name">SonicWeave</div><div class="model-note">Chunk-Routed MoE</div><audio controls="" preload="none" src="wavs/cpe_017.wav"></audio></div></div>
-<div class="comparison-row"><div class="prompt-cell"><p>Over VHF radio in a violent storm, a panicked sailor calls, “Mayday, mayday, this is Harbor Seven, we are taking on water!” A coast guard operator answers, “Harbor Seven, rescue boat launching now, hold your position!” Waves, rain, wind, static, and dropouts batter the transmission.</p><details class="structured-prompt" data-case="cpe_032">
-<summary>Structured prompt · VHF storm rescue</summary>
-<p class="structured-note">Structured input shared by Dense, Base-MoE, and SonicWeave</p>
-<pre>A sailor and coast guard exchange an emergency radio call during a violent storm.
-&lt;type&gt;mixed&lt;/type&gt;
-&lt;lang&gt;en&lt;/lang&gt;
-&lt;speech&gt;Mayday, mayday, this is Harbor Seven, we are taking on water! / Harbor Seven, rescue boat launching now, hold your position!&lt;/speech&gt;
-&lt;speaker_count&gt;2&lt;/speaker_count&gt;
-&lt;relation&gt;panicked sailor requesting rescue and coast guard operator responding&lt;/relation&gt;
-&lt;vocal&gt;panicked sailor and coast guard operator over VHF radio&lt;/vocal&gt;
-&lt;sfx&gt;waves, rain, wind, static, and dropouts&lt;/sfx&gt;
-&lt;ambience&gt;violent storm at sea&lt;/ambience&gt;
-&lt;texture&gt;radio transmission battered by static and dropouts&lt;/texture&gt;</pre>
-</details></div><div class="model-cell"><div class="model-name">Dense</div><div class="model-note">1B dense baseline</div><audio controls="" preload="none" src="wavs/dense_032.wav"></audio></div><div class="model-cell"><div class="model-name">Base-MoE</div><div class="model-note">Token-level audio routing</div><audio controls="" preload="none" src="wavs/basemoe_032.wav"></audio></div><div class="model-cell sonic"><div class="model-name">SonicWeave</div><div class="model-note">Chunk-Routed MoE</div><audio controls="" preload="none" src="wavs/cpe_032.wav"></audio></div></div>
-<div class="comparison-row"><div class="prompt-cell"><p>At a morning market, a customer and vendor bargain in Mandarin: “老板，这个西红柿多少钱一斤？” “四块五，今天刚进的货，特别新鲜。” “能便宜点吗？我多买一点。” Plastic bags, vendor calls, scooters, and cooking from a nearby stall blend together.</p><details class="structured-prompt" data-case="cpe_029">
-<summary>Structured prompt · Morning market</summary>
-<p class="structured-note">Structured input shared by Dense, Base-MoE, and SonicWeave</p>
-<pre>A customer and vendor bargain in Mandarin at a busy morning market.
-&lt;type&gt;mixed&lt;/type&gt;
-&lt;lang&gt;zh&lt;/lang&gt;
-&lt;speech&gt;老板，这个西红柿多少钱一斤？ / 四块五，今天刚进的货，特别新鲜。 / 能便宜点吗？我多买一点。&lt;/speech&gt;
-&lt;speaker_count&gt;2&lt;/speaker_count&gt;
-&lt;relation&gt;customer bargaining with a vendor&lt;/relation&gt;
-&lt;sfx&gt;plastic bags, vendor calls, scooters, and cooking from a nearby stall&lt;/sfx&gt;
-&lt;ambience&gt;morning market&lt;/ambience&gt;
-&lt;texture&gt;foreground dialogue blended with surrounding market activity&lt;/texture&gt;</pre>
-</details></div><div class="model-cell"><div class="model-name">Dense</div><div class="model-note">1B dense baseline</div><audio controls="" preload="none" src="wavs/dense_029.wav"></audio></div><div class="model-cell"><div class="model-name">Base-MoE</div><div class="model-note">Token-level audio routing</div><audio controls="" preload="none" src="wavs/basemoe_029.wav"></audio></div><div class="model-cell sonic"><div class="model-name">SonicWeave</div><div class="model-note">Chunk-Routed MoE</div><audio controls="" preload="none" src="wavs/cpe_029.wav"></audio></div></div>
-<div class="comparison-foot">SonicWeave substantially outperforms Dense and Base-MoE in cross-lingual speech, event responsiveness, and naturalness.</div>
+<figcaption class="figure-caption"><strong>Method. </strong>A stereo VAE encodes audio into continuous latents, which are jointly modeled with a structured-caption stream in a flow-matching DiT. CPE-MoE groups audio tokens into contiguous chunks and fuses a global text-and-phase prior with local acoustic evidence for sparse expert routing. The selected experts transform the original frame states, so the chunk is the routing unit rather than the representation unit; text and time tokens remain on a stable shared path.</figcaption>
+</figure>
 </div>
-</section>
-<section id="systems">
-<div class="section-head">
-<div><p class="section-kicker">03 · External systems</p><h2>Complex generation against strong systems</h2></div>
-<p>Audio outputs from the same scene prompts, comparing SonicWeave with Higgs Audio V2 and Dasheng AudioGen across diverse speech-and-environment compositions.</p>
-</div>
-<div class="comparison">
-<div class="comparison-head"><div>Natural-language prompt</div><div>Higgs Audio V2</div><div>Dasheng AudioGen</div><div>SonicWeave</div></div>
-<div class="comparison-row"><div class="prompt-cell"><p>In a busy gym, a trainer shouts, “Three more reps, you’ve got this! Keep your core tight. Two more!” Weight plates clank, treadmills run, people breathe heavily, and battle ropes strike the floor around him.</p><details class="structured-prompt" data-case="cpe_010">
-<summary>Structured prompt · Busy gym</summary>
-<p class="structured-note">SonicWeave uses this structured input; public systems receive the natural-language prompt</p>
-<pre>A trainer shouts encouragement over the sounds of a busy gym.
+</section><section class="featured-case" id="featured-case"><div class="section-head"><div><p class="section-kicker">Featured complex scene</p><h2>Audio generation and routing trace</h2></div></div><article class="case-feature"><div class="case-feature-copy"><div class="case-number">Complex Scene</div><span class="prompt-label">Natural-language prompt</span><p>In a busy gym, a trainer shouts, “Three more reps, you’ve got this! Keep your core tight. Two more!” Weight plates clank, treadmills run, people breathe heavily, and battle ropes strike the floor around him.</p><details class="structured"><summary>Structured prompt</summary><pre>A trainer shouts encouragement over the sounds of a busy gym.
 &lt;type&gt;mixed&lt;/type&gt;
 &lt;lang&gt;en&lt;/lang&gt;
 &lt;speech&gt;Three more reps, you’ve got this! Keep your core tight. Two more!&lt;/speech&gt;
@@ -380,12 +1134,289 @@
 &lt;vocal&gt;trainer shouting encouragement&lt;/vocal&gt;
 &lt;sfx&gt;weight plates clanking, treadmills running, heavy breathing, and battle ropes striking the floor&lt;/sfx&gt;
 &lt;ambience&gt;busy gym&lt;/ambience&gt;
-&lt;texture&gt;foreground speech over dense gym activity&lt;/texture&gt;</pre>
-</details></div><div class="model-cell"><div class="model-name">Higgs Audio V2</div><audio controls="" preload="none" src="wavs/higgs_010.wav"></audio></div><div class="model-cell"><div class="model-name">Dasheng AudioGen</div><audio controls="" preload="none" src="wavs/dasheng_010.wav"></audio></div><div class="model-cell sonic"><div class="model-name">SonicWeave</div><audio controls="" preload="none" src="wavs/cpe_010.wav"></audio></div></div>
-<div class="comparison-row"><div class="prompt-cell"><p>A man says, “Let’s see if this works now.” Background music is playing; a series of electronic beeps is followed by a cat meow.</p><details class="structured-prompt" data-case="cpe_014">
-<summary>Structured prompt · Speech, music, beeps, and cat</summary>
-<p class="structured-note">SonicWeave uses this structured input; public systems receive the natural-language prompt</p>
-<pre>A man speaks over background music before electronic beeps and a cat meow.
+&lt;texture&gt;foreground speech over dense gym activity&lt;/texture&gt;</pre></details><div class="audio-area case-feature-audio"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/cpe_010.wav"></audio></div></div><figure class="case-feature-figure"><img alt="Chunk-level routing trace for cpe_010" onerror="showImageFallback(this)" src="Figures/case.png"/><div class="image-fallback trace-fallback">Routing trace</div><figcaption>Chunk-level expert selections and conflict-gate trajectory for the featured busy-gym generation.</figcaption></figure></article></section>
+<section id="examples">
+<div class="section-head">
+<div>
+<p class="section-kicker">Public-task gallery</p>
+<h2>Speech, environmental audio, music, and singing</h2>
+</div>
+</div>
+<!-- TTS -->
+<div class="task-section" id="tts">
+<div class="task-title-row">
+<h3>Text-to-Speech</h3>
+<p>English and Mandarin examples under the same model.</p>
+</div>
+<div class="task-with-metrics">
+<div class="sample-grid">
+<article class="sample-card">
+<div class="sample-header"><div><h4>English speech</h4><div class="sample-id">SeedTTS · EN</div></div><span class="badge">TTS</span></div>
+<div class="prompt">
+<span class="prompt-label">Transcript</span>
+<p>“He didn't consider mending the hole — the stones could fall through any time they wanted.”</p>
+<details class="structured"><summary>Structured prompt</summary><pre>Plain English speech.
+&lt;type&gt;speech&lt;/type&gt;
+&lt;lang&gt;en&lt;/lang&gt;
+&lt;speech&gt;He didn't consider mending the hole — the stones could fall through any time they wanted.&lt;/speech&gt;
+&lt;speaker_count&gt;1&lt;/speaker_count&gt;
+&lt;vocal&gt;adult English voice, neutral tone&lt;/vocal&gt;</pre></details>
+</div>
+<div class="audio-area"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/seedtts-en_common_voice_en_9559-common_voice_en_9560.wav"></audio></div>
+</article>
+<article class="sample-card">
+<div class="sample-header"><div><h4>Mandarin speech</h4><div class="sample-id">SeedTTS · ZH</div></div><span class="badge">TTS</span></div>
+<div class="prompt">
+<span class="prompt-label">Transcript</span>
+<p>“尽管是用民间资金办学，但亚奥学校的性质并不单纯。”</p>
+<details class="structured"><summary>Structured prompt</summary><pre>Plain Mandarin speech.
+&lt;type&gt;speech&lt;/type&gt;
+&lt;lang&gt;zh&lt;/lang&gt;
+&lt;speech&gt;尽管是用民间资金办学，但亚奥学校的性质并不单纯。&lt;/speech&gt;
+&lt;speaker_count&gt;1&lt;/speaker_count&gt;
+&lt;vocal&gt;adult Mandarin voice, neutral tone&lt;/vocal&gt;</pre></details>
+</div>
+<div class="audio-area"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/seedtts-zh_00004504-00000057.wav"></audio></div>
+</article>
+</div>
+<aside class="metric-image-card"><div class="metric-image-head">TTS objective results</div><div class="metric-image-frame"><img alt="Objective results for SeedTTS and LibriSpeech" onerror="showImageFallback(this)" src="Figures/tts_results.png"/><div class="image-fallback metric-fallback">TTS objective results</div></div></aside>
+</div>
+</div>
+<!-- TTA -->
+<div class="task-section" id="tta">
+<div class="task-title-row">
+<h3>Text-to-Audio</h3>
+<p>Multi-source environmental audio from AudioCaps captions.</p>
+</div>
+<div class="task-with-metrics">
+<div class="sample-grid">
+<article class="sample-card">
+<div class="sample-header"><div><h4>Multi-source environmental scene</h4><div class="sample-id">AudioCaps · 104323</div></div><span class="badge">TTA</span></div>
+<div class="prompt">
+<span class="prompt-label">Caption</span>
+<p>Horses trotting while wood clanks several times as a woman talks and birds chirp in the background alongside wind blowing into a microphone.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>Horses trotting while wood clanks several times as a woman talks and birds chirp in the background alongside wind blowing into a microphone.
+&lt;type&gt;sfx&lt;/type&gt;
+&lt;speaker_count&gt;1&lt;/speaker_count&gt;
+&lt;vocal&gt;a woman talking in the background&lt;/vocal&gt;
+&lt;sfx&gt;horses trotting, wood clanking several times, birds chirping, wind blowing into a microphone&lt;/sfx&gt;
+&lt;texture&gt;multi-source environmental scene with background birds and microphone wind noise&lt;/texture&gt;</pre></details>
+</div>
+<div class="audio-area"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/audiocaps_104323.wav"></audio></div>
+</article>
+<article class="sample-card">
+<div class="sample-header"><div><h4>Duck, water, and laughter</h4><div class="sample-id">AudioCaps · 103898</div></div><span class="badge">TTA</span></div>
+<div class="prompt">
+<span class="prompt-label">Caption</span>
+<p>Water splashing as duck quacks followed by brief laughter</p>
+<details class="structured"><summary>Structured prompt</summary><pre>Water splashing as duck quacks followed by brief laughter
+&lt;type&gt;sfx&lt;/type&gt;
+&lt;sfx&gt;water splashing, duck quacking, human laughter&lt;/sfx&gt;
+&lt;texture&gt;natural field recording&lt;/texture&gt;</pre></details>
+</div>
+<div class="audio-area"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/audiocaps_103898.wav"></audio></div>
+</article>
+</div>
+<aside class="metric-image-card"><div class="metric-image-head">Text-to-audio objective results</div><div class="metric-image-frame"><img alt="Objective results on AudioCaps" onerror="showImageFallback(this)" src="Figures/tta_results.png"/><div class="image-fallback metric-fallback">Text-to-audio objective results</div></div></aside>
+</div>
+</div>
+<!-- TTM -->
+<div class="task-section" id="ttm">
+<div class="task-title-row">
+<h3>Text-to-Music and Singing</h3>
+<p>Instrumental and vocal music generation share the same weights and conditioning interface.</p>
+</div>
+<div class="task-with-metrics">
+<div class="sample-grid">
+<article class="sample-card">
+<div class="sample-header"><div><h4>Solo cello performance</h4><div class="sample-id">MusicCaps · _3GnNMrDuCs</div></div><span class="badge">TTM</span></div>
+<div class="prompt">
+<span class="prompt-label">Caption</span>
+<p>This audio contains someone playing a piece on cello ranging from the low register up into the higher register. This song may be playing during a live performance.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>This audio contains someone playing a piece on cello ranging from the low register up into the higher register. This song may be playing during a live performance.
+&lt;type&gt;music&lt;/type&gt;
+&lt;music&gt;cello performance ranging from the low register to the higher register&lt;/music&gt;
+&lt;texture&gt;possible live-performance setting&lt;/texture&gt;</pre></details>
+</div>
+<div class="audio-area"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/musiccaps__3GnNMrDuCs.wav"></audio></div>
+</article>
+<article class="sample-card">
+<div class="sample-header"><div><h4>Upbeat country-rock singing</h4><div class="sample-id">Song Describer · 233</div></div><span class="badge">Singing</span></div>
+<div class="prompt">
+<span class="prompt-label">Caption</span>
+<p>A rock song with a country vibe, it has male vocals, drums, and acoustic guitar. It is an upbeat song.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>A rock song with a country vibe, it has male vocals, drums, and acoustic guitar. It is an upbeat song.
+&lt;type&gt;singing&lt;/type&gt;
+&lt;vocal&gt;male vocals&lt;/vocal&gt;
+&lt;music&gt;upbeat rock song with a country vibe, drums, and acoustic guitar&lt;/music&gt;</pre></details>
+</div>
+<div class="audio-area"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/song_233.wav"></audio></div>
+</article>
+</div>
+<aside class="metric-image-card"><div class="metric-image-head">Music-generation objective results</div><div class="metric-image-frame"><img alt="Objective results on MusicCaps and Song Describer" onerror="showImageFallback(this)" src="Figures/ttm_results.png"/><div class="image-fallback metric-fallback">Music-generation objective results</div></div></aside>
+</div>
+</div>
+</section>
+<section id="complex">
+<div class="section-head">
+<div>
+<p class="section-kicker">Complex-scene showcase</p>
+<h2>Multi-element composition in one clip</h2>
+</div>
+</div>
+<div class="task-with-metrics complex-with-metrics"><div class="sample-grid">
+<article class="sample-card">
+<div class="sample-header"><div><h4>Riverside singing scene</h4><div class="sample-id">Complex Scene</div></div><span class="badge">Mixed</span></div>
+<div class="prompt">
+<span class="prompt-label">Natural-language prompt</span>
+<p>In a riverside park, an adult female singer softly sings in Mandarin, “风从桥下慢慢来，带走水面一片白。” Acoustic guitar is gently strummed, while wind, birdsong, bicycle bells, and the distant sound of the park naturally surround her voice.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>A female singer performs softly in Mandarin with acoustic guitar in a riverside park.
+&lt;type&gt;mixed&lt;/type&gt;
+&lt;lang&gt;zh&lt;/lang&gt;
+&lt;lyrics&gt;风从桥下慢慢来，带走水面一片白。&lt;/lyrics&gt;
+&lt;speaker_count&gt;1&lt;/speaker_count&gt;
+&lt;vocal&gt;adult female singer, soft Mandarin singing&lt;/vocal&gt;
+&lt;music&gt;gently strummed acoustic guitar&lt;/music&gt;
+&lt;sfx&gt;bicycle bells&lt;/sfx&gt;
+&lt;ambience&gt;riverside park with wind, birdsong, and distant park sounds&lt;/ambience&gt;
+&lt;texture&gt;voice naturally surrounded by guitar and park ambience&lt;/texture&gt;</pre></details>
+</div>
+<div class="audio-area"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/cpe_091.wav"></audio></div>
+</article>
+<article class="sample-card">
+<div class="sample-header"><div><h4>Race-engineer dialogue</h4><div class="sample-id">Complex Scene</div></div><span class="badge">Mixed</span></div>
+<div class="prompt">
+<span class="prompt-label">Natural-language prompt</span>
+<p>During a race, a controlled male engineer says over English radio, “Box this lap; the rear temperatures are climbing.” The strained male driver replies, “Copy, but the steering is vibrating under braking.” “Understood, stay off the inside curb.” Engine roar, wind, tires, and radio pops collide. Calls are somewhat distorted by noise.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>English race-engineer and driver radio dialogue at high speed.
+&lt;type&gt;mixed&lt;/type&gt;
+&lt;lang&gt;en&lt;/lang&gt;
+&lt;speech&gt;Box this lap; the rear temperatures are climbing. / Copy, but the steering is vibrating under braking. / Understood, stay off the inside curb.&lt;/speech&gt;
+&lt;speaker_count&gt;2&lt;/speaker_count&gt;
+&lt;relation&gt;pit engineer advising a race driver&lt;/relation&gt;
+&lt;vocal&gt;controlled male engineer and strained male driver through clipped team radio&lt;/vocal&gt;
+&lt;sfx&gt;Engine roar, wind, tires, and radio pops collide&lt;/sfx&gt;
+&lt;ambience&gt;race car at speed with strong wind trackside&lt;/ambience&gt;
+&lt;texture&gt;driver transmission is noisier and more distorted than the engineer response&lt;/texture&gt;</pre></details>
+</div>
+<div class="audio-area"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/cpe_074.wav"></audio></div>
+</article>
+<article class="sample-card">
+<div class="sample-header"><div><h4>Rural pondside conversation</h4><div class="sample-id">Complex Scene</div></div><span class="badge">Mixed</span></div>
+<div class="prompt">
+<span class="prompt-label">Natural-language prompt</span>
+<p>Beside a rural pond, a man urgently asks in Mandarin, “你要干啥？别往那边走，水边滑得很。” A younger voice replies excitedly, “我就看看那条鱼，刚才它跳起来了。” The man warns, “小心点，鞋底都是泥，摔一下可不得了。” Cicadas chirp, a distant dog barks, and water ripples against the muddy bank beneath light wind.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>rural outdoor Mandarin conversation with sudden questioning near a pond
+&lt;type&gt;mixed&lt;/type&gt;
+&lt;lang&gt;zh&lt;/lang&gt;
+&lt;speech&gt;你要干啥？别往那边走，水边滑得很 / 我就看看那条鱼，刚才它跳起来了 / 小心点，鞋底都是泥，摔一下可不得了&lt;/speech&gt;
+&lt;speaker_count&gt;2&lt;/speaker_count&gt;
+&lt;vocal&gt;rural Mandarin accents, clear questioning male voice and younger excited voice&lt;/vocal&gt;
+&lt;sfx&gt;cicada chirping, distant dog barking, water rippling against muddy bank&lt;/sfx&gt;
+&lt;texture&gt;open rural pond atmosphere, light wind across microphone, dialogue remains intelligible over natural ambience&lt;/texture&gt;</pre></details>
+</div>
+<div class="audio-area"><p class="audio-label">SonicWeave output</p><audio controls="" preload="none" src="wavs/cpe_062.wav"></audio></div>
+</article>
+</div><aside class="metric-image-card"><div class="metric-image-head">Complex-scene evaluation</div><div class="metric-image-frame"><img alt="Complex-scene reference-free and human-listening results" onerror="showImageFallback(this)" src="Figures/complex_results.png"/><div class="image-fallback metric-fallback">Complex-scene evaluation</div></div></aside></div>
+</section>
+<section class="comparison" id="controlled">
+<div class="section-head">
+<div>
+<p class="section-kicker">Controlled comparison</p>
+<h2>Dense, Base-MoE, and SonicWeave</h2>
+</div>
+</div>
+<div class="comparison-box">
+<div class="comparison-head"><div>Prompt</div><div>Dense</div><div>Base-MoE</div><div>SonicWeave</div></div>
+<div class="comparison-row">
+<div class="comparison-prompt">
+<div class="case-number">Airport gate</div>
+<p>At a busy airport gate, a female Mandarin PA announcer says, “前往上海的旅客请注意，CA八三七航班现在开始登机。” then repeats in English, “Passengers traveling to Shanghai on flight CA eight three seven may now board through gate twenty-six.” Her formal, slightly nasal voices come through the public-address system. Rolling suitcases, distant boarding beeps, overlapping conversations, and footsteps fill the terminal. Bright reflections from the large hall and PA-system compression color the sound.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>busy bilingual airport gate announcement with overlapping travelers and rolling suitcases
+&lt;type&gt;speech&lt;/type&gt;
+&lt;lang&gt;zh,en&lt;/lang&gt;
+&lt;speech&gt;前往上海的旅客请注意，CA八三七航班现在开始登机。Passengers traveling to Shanghai on flight CA eight three seven may now board through gate twenty-six.&lt;/speech&gt;
+&lt;speaker_count&gt;1&lt;/speaker_count&gt;
+&lt;vocal&gt;Mandarin female PA announcer followed by English, formal broadcast diction, slightly nasal loudspeaker tone&lt;/vocal&gt;
+&lt;ambience&gt;busy airport terminal, suitcase wheels, distant boarding beeps, overlapping conversations, footsteps on polished floor&lt;/ambience&gt;
+&lt;texture&gt;PA system compression, bright reflections from large hall&lt;/texture&gt;</pre></details>
+</div>
+<div class="model-cell"><div class="model-name">Dense</div><div class="model-note">1B dense baseline</div><audio controls="" preload="none" src="wavs/dense_017.wav"></audio></div>
+<div class="model-cell"><div class="model-name">Base-MoE</div><div class="model-note">Token-level routing</div><audio controls="" preload="none" src="wavs/basemoe_017.wav"></audio></div>
+<div class="model-cell sonic"><div class="model-name">SonicWeave</div><div class="model-note">Chunk-routed CPE-MoE</div><audio controls="" preload="none" src="wavs/cpe_017.wav"></audio></div>
+</div>
+<div class="comparison-row">
+<div class="comparison-prompt">
+<div class="case-number">VHF storm rescue</div>
+<p>Over VHF radio in a violent storm, a panicked sailor calls, “Mayday, mayday, this is Harbor Seven, we are taking on water!” A coast guard operator answers, “Harbor Seven, rescue boat launching now, hold your position!” Waves, rain, wind, static, and dropouts batter the transmission.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>A sailor and coast guard exchange an emergency radio call during a violent storm.
+&lt;type&gt;mixed&lt;/type&gt;
+&lt;lang&gt;en&lt;/lang&gt;
+&lt;speech&gt;Mayday, mayday, this is Harbor Seven, we are taking on water! / Harbor Seven, rescue boat launching now, hold your position!&lt;/speech&gt;
+&lt;speaker_count&gt;2&lt;/speaker_count&gt;
+&lt;relation&gt;panicked sailor requesting rescue and coast guard operator responding&lt;/relation&gt;
+&lt;vocal&gt;panicked sailor and coast guard operator over VHF radio&lt;/vocal&gt;
+&lt;sfx&gt;waves, rain, wind, static, and dropouts&lt;/sfx&gt;
+&lt;ambience&gt;violent storm at sea&lt;/ambience&gt;
+&lt;texture&gt;radio transmission battered by static and dropouts&lt;/texture&gt;</pre></details>
+</div>
+<div class="model-cell"><div class="model-name">Dense</div><div class="model-note">1B dense baseline</div><audio controls="" preload="none" src="wavs/dense_032.wav"></audio></div>
+<div class="model-cell"><div class="model-name">Base-MoE</div><div class="model-note">Token-level routing</div><audio controls="" preload="none" src="wavs/basemoe_032.wav"></audio></div>
+<div class="model-cell sonic"><div class="model-name">SonicWeave</div><div class="model-note">Chunk-routed CPE-MoE</div><audio controls="" preload="none" src="wavs/cpe_032.wav"></audio></div>
+</div>
+<div class="comparison-row">
+<div class="comparison-prompt">
+<div class="case-number">Morning market</div>
+<p>At a morning market, a customer and vendor bargain in Mandarin: “老板，这个西红柿多少钱一斤？” “四块五，今天刚进的货，特别新鲜。” “能便宜点吗？我多买一点。” Plastic bags, vendor calls, scooters, and cooking from a nearby stall blend together.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>A customer and vendor bargain in Mandarin at a busy morning market.
+&lt;type&gt;mixed&lt;/type&gt;
+&lt;lang&gt;zh&lt;/lang&gt;
+&lt;speech&gt;老板，这个西红柿多少钱一斤？ / 四块五，今天刚进的货，特别新鲜。 / 能便宜点吗？我多买一点。&lt;/speech&gt;
+&lt;speaker_count&gt;2&lt;/speaker_count&gt;
+&lt;relation&gt;customer bargaining with a vendor&lt;/relation&gt;
+&lt;sfx&gt;plastic bags, vendor calls, scooters, and cooking from a nearby stall&lt;/sfx&gt;
+&lt;ambience&gt;morning market&lt;/ambience&gt;
+&lt;texture&gt;foreground dialogue blended with surrounding market activity&lt;/texture&gt;</pre></details>
+</div>
+<div class="model-cell"><div class="model-name">Dense</div><div class="model-note">1B dense baseline</div><audio controls="" preload="none" src="wavs/dense_029.wav"></audio></div>
+<div class="model-cell"><div class="model-name">Base-MoE</div><div class="model-note">Token-level routing</div><audio controls="" preload="none" src="wavs/basemoe_029.wav"></audio></div>
+<div class="model-cell sonic"><div class="model-name">SonicWeave</div><div class="model-note">Chunk-routed CPE-MoE</div><audio controls="" preload="none" src="wavs/cpe_029.wav"></audio></div>
+</div>
+<div class="comparison-foot">Matched inputs highlight cross-lingual speech, event responsiveness, speaker structure, and foreground–background composition.</div>
+</div>
+</section>
+<section class="comparison" id="systems">
+<div class="section-head">
+<div>
+<p class="section-kicker">External systems</p>
+<h2>Complex generation against strong public systems</h2>
+</div>
+</div>
+<div class="comparison-box">
+<div class="comparison-head"><div>Prompt</div><div>Higgs Audio V2</div><div>Dasheng AudioGen</div><div>SonicWeave</div></div>
+<div class="comparison-row">
+<div class="comparison-prompt">
+<div class="case-number">Busy gym</div>
+<p>In a busy gym, a trainer shouts, “Three more reps, you’ve got this! Keep your core tight. Two more!” Weight plates clank, treadmills run, people breathe heavily, and battle ropes strike the floor around him.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>A trainer shouts encouragement over the sounds of a busy gym.
+&lt;type&gt;mixed&lt;/type&gt;
+&lt;lang&gt;en&lt;/lang&gt;
+&lt;speech&gt;Three more reps, you’ve got this! Keep your core tight. Two more!&lt;/speech&gt;
+&lt;speaker_count&gt;1&lt;/speaker_count&gt;
+&lt;relation&gt;trainer addressing gym participants&lt;/relation&gt;
+&lt;vocal&gt;trainer shouting encouragement&lt;/vocal&gt;
+&lt;sfx&gt;weight plates clanking, treadmills running, heavy breathing, and battle ropes striking the floor&lt;/sfx&gt;
+&lt;ambience&gt;busy gym&lt;/ambience&gt;
+&lt;texture&gt;foreground speech over dense gym activity&lt;/texture&gt;</pre></details>
+</div>
+<div class="model-cell"><div class="model-name">Higgs Audio V2</div><audio controls="" preload="none" src="wavs/higgs_010.wav"></audio></div>
+<div class="model-cell"><div class="model-name">Dasheng AudioGen</div><audio controls="" preload="none" src="wavs/dasheng_010.wav"></audio></div>
+<div class="model-cell sonic"><div class="model-name">SonicWeave</div><audio controls="" preload="none" src="wavs/cpe_010.wav"></audio></div>
+</div><div class="comparison-row">
+<div class="comparison-prompt">
+<div class="case-number">Speech, music, beeps, and cat</div>
+<p>A man says, “Let’s see if this works now.” Background music is playing; a series of electronic beeps is followed by a cat meow.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>A man speaks over background music before electronic beeps and a cat meow.
 &lt;type&gt;mixed&lt;/type&gt;
 &lt;lang&gt;en&lt;/lang&gt;
 &lt;speech&gt;Let’s see if this works now.&lt;/speech&gt;
@@ -393,12 +1424,17 @@
 &lt;vocal&gt;a man speaking&lt;/vocal&gt;
 &lt;music&gt;background music&lt;/music&gt;
 &lt;sfx&gt;a series of electronic beeps followed by a cat meow&lt;/sfx&gt;
-&lt;texture&gt;background music under foreground speech with ordered sound events&lt;/texture&gt;</pre>
-</details></div><div class="model-cell"><div class="model-name">Higgs Audio V2</div><audio controls="" preload="none" src="wavs/higgs_014.wav"></audio></div><div class="model-cell"><div class="model-name">Dasheng AudioGen</div><audio controls="" preload="none" src="wavs/dasheng_014.wav"></audio></div><div class="model-cell sonic"><div class="model-name">SonicWeave</div><audio controls="" preload="none" src="wavs/cpe_014.wav"></audio></div></div>
-<div class="comparison-row"><div class="prompt-cell"><p>Two women discuss game rules: “You move only after the timer starts.” “Got it, then I will wait for the signal.” Energetic electronic music with bouncy synthesizers and drums plays underneath.</p><details class="structured-prompt" data-case="cpe_024">
-<summary>Structured prompt · Game-rule dialogue with music</summary>
-<p class="structured-note">SonicWeave uses this structured input; public systems receive the natural-language prompt</p>
-<pre>Two women discuss game rules over energetic electronic music.
+&lt;texture&gt;background music under foreground speech with ordered sound events&lt;/texture&gt;</pre></details>
+</div>
+<div class="model-cell"><div class="model-name">Higgs Audio V2</div><audio controls="" preload="none" src="wavs/higgs_014.wav"></audio></div>
+<div class="model-cell"><div class="model-name">Dasheng AudioGen</div><audio controls="" preload="none" src="wavs/dasheng_014.wav"></audio></div>
+<div class="model-cell sonic"><div class="model-name">SonicWeave</div><audio controls="" preload="none" src="wavs/cpe_014.wav"></audio></div>
+</div>
+<div class="comparison-row">
+<div class="comparison-prompt">
+<div class="case-number">Dialogue with electronic music</div>
+<p>Two women discuss game rules: “You move only after the timer starts.” “Got it, then I will wait for the signal.” Energetic electronic music with bouncy synthesizers and drums plays underneath.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>Two women discuss game rules over energetic electronic music.
 &lt;type&gt;mixed&lt;/type&gt;
 &lt;lang&gt;en&lt;/lang&gt;
 &lt;speech&gt;You move only after the timer starts. / Got it, then I will wait for the signal.&lt;/speech&gt;
@@ -406,12 +1442,17 @@
 &lt;relation&gt;two women discussing game rules&lt;/relation&gt;
 &lt;vocal&gt;two women speaking&lt;/vocal&gt;
 &lt;music&gt;energetic electronic music with bouncy synthesizers and drums&lt;/music&gt;
-&lt;texture&gt;music playing underneath the dialogue&lt;/texture&gt;</pre>
-</details></div><div class="model-cell"><div class="model-name">Higgs Audio V2</div><audio controls="" preload="none" src="wavs/higgs_024.wav"></audio></div><div class="model-cell"><div class="model-name">Dasheng AudioGen</div><audio controls="" preload="none" src="wavs/dasheng_024.wav"></audio></div><div class="model-cell sonic"><div class="model-name">SonicWeave</div><audio controls="" preload="none" src="wavs/cpe_024.wav"></audio></div></div>
-<div class="comparison-row"><div class="prompt-cell"><p>In a large classroom, children rehearse in English: “Wait, you’re supposed to say the magic word first!” “Oh right, I keep forgetting. Let me try again.” “Okay, from the top!” Chairs scrape, pencils tap, classmates whisper, and pages turn around them.</p><details class="structured-prompt" data-case="cpe_031">
-<summary>Structured prompt · Noisy classroom rehearsal</summary>
-<p class="structured-note">SonicWeave uses this structured input; public systems receive the natural-language prompt</p>
-<pre>Children rehearse English dialogue in a large classroom.
+&lt;texture&gt;music playing underneath the dialogue&lt;/texture&gt;</pre></details>
+</div>
+<div class="model-cell"><div class="model-name">Higgs Audio V2</div><audio controls="" preload="none" src="wavs/higgs_024.wav"></audio></div>
+<div class="model-cell"><div class="model-name">Dasheng AudioGen</div><audio controls="" preload="none" src="wavs/dasheng_024.wav"></audio></div>
+<div class="model-cell sonic"><div class="model-name">SonicWeave</div><audio controls="" preload="none" src="wavs/cpe_024.wav"></audio></div>
+</div>
+<div class="comparison-row">
+<div class="comparison-prompt">
+<div class="case-number">Classroom rehearsal</div>
+<p>In a large classroom, children rehearse in English: “Wait, you’re supposed to say the magic word first!” “Oh right, I keep forgetting. Let me try again.” “Okay, from the top!” Chairs scrape, pencils tap, classmates whisper, and pages turn around them.</p>
+<details class="structured"><summary>Structured prompt</summary><pre>Children rehearse English dialogue in a large classroom.
 &lt;type&gt;mixed&lt;/type&gt;
 &lt;lang&gt;en&lt;/lang&gt;
 &lt;speech&gt;Wait, you’re supposed to say the magic word first! / Oh right, I keep forgetting. Let me try again. / Okay, from the top!&lt;/speech&gt;
@@ -420,11 +1461,35 @@
 &lt;vocal&gt;children speaking in English&lt;/vocal&gt;
 &lt;sfx&gt;chairs scraping, pencils tapping, classmates whispering, and pages turning&lt;/sfx&gt;
 &lt;ambience&gt;large classroom&lt;/ambience&gt;
-&lt;texture&gt;foreground dialogue surrounded by classroom activity&lt;/texture&gt;</pre>
-</details></div><div class="model-cell"><div class="model-name">Higgs Audio V2</div><audio controls="" preload="none" src="wavs/higgs_031.wav"></audio></div><div class="model-cell"><div class="model-name">Dasheng AudioGen</div><audio controls="" preload="none" src="wavs/dasheng_031.wav"></audio></div><div class="model-cell sonic"><div class="model-name">SonicWeave</div><audio controls="" preload="none" src="wavs/cpe_031.wav"></audio></div></div>
+&lt;texture&gt;foreground dialogue surrounded by classroom activity&lt;/texture&gt;</pre></details>
+</div>
+<div class="model-cell"><div class="model-name">Higgs Audio V2</div><audio controls="" preload="none" src="wavs/higgs_031.wav"></audio></div>
+<div class="model-cell"><div class="model-name">Dasheng AudioGen</div><audio controls="" preload="none" src="wavs/dasheng_031.wav"></audio></div>
+<div class="model-cell sonic"><div class="model-name">SonicWeave</div><audio controls="" preload="none" src="wavs/cpe_031.wav"></audio></div>
+</div>
 </div>
 </section>
 </main>
-<footer><div class="shell">SonicWeave · Chunk-Routed Mixture-of-Experts</div></footer>
+<footer><div class="shell">SonicWeave · Unified audio scene generation · Best experienced with headphones.</div></footer>
+<script>
+function showImageFallback(img) {
+  img.style.display = "none";
+  const fallback = img.nextElementSibling;
+  if (fallback) fallback.style.display = "grid";
+}
+document.querySelectorAll("audio").forEach((player) => {
+  player.addEventListener("play", () => {
+    document.querySelectorAll("audio").forEach((other) => {
+      if (other !== player) other.pause();
+    });
+  });
+});
+</script>
+<script crossorigin="anonymous" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e"}' integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" type="module"></script>
+<script crossorigin="anonymous" data-cf-beacon='{"version":"2024.11.0","token":"b2074e7888b746fe9fbbc15492b4c3d4"}' integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" type="module"></script>
+<script crossorigin="anonymous" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e"}' integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" type="module"></script>
+<script crossorigin="anonymous" data-cf-beacon='{"version":"2024.11.0","token":"b2074e7888b746fe9fbbc15492b4c3d4"}' integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" type="module"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e"}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"b2074e7888b746fe9fbbc15492b4c3d4"}' crossorigin="anonymous"></script>
 </body>
 </html>
