@@ -874,8 +874,10 @@ body {
 /* Teaser and contribution summaries: closer, aligned, and easier to read */
 .teaser-method-row {
   grid-template-columns:minmax(0,2.05fr) minmax(400px,.95fr);
-  gap:5px;
+  gap:0px;
   align-items:stretch;
+  position:relative;
+  left:-70px;
 }
 
 .figure-stack .teaser-method-row .teaser-card img {
@@ -1044,6 +1046,7 @@ footer {
 @media (max-width:1100px) {
   .teaser-method-row {
     grid-template-columns:minmax(0,1.65fr) minmax(350px,.9fr);
+    left:0;
   }
 }
 
@@ -1087,6 +1090,7 @@ footer {
 <div class="author-note"><sup>*</sup>Work done during an internship at Kuaishou Technology.    <sup>†</sup>Corresponding authors.</div>
 </div>
 <div class="button-row">
+<a class="button" href="https://github.com/caiyunrui" title="Project page">Project page</a>
 <a class="button" href="#">arXiv</a>
 <a class="button" href="#examples">Audio examples</a>
 </div>
