@@ -41,4 +41,12 @@ complex audio scenes, and controlled model comparisons are available on the
 
 ## Citation
 
-Citation information will be added after the arXiv release.
+If you find our work useful, please consider citing:
+
+```bibtex
+@article{cai2026sonicweave,
+  title   = {SonicWeave: Chunk-Routed Mixture-of-Experts for Unified Audio Scene Generation},
+  author  = {Cai, Yunrui and Li, Xu and Zhou, Yucheng and Li, Jinchao and Wang, Dingdong and Yang, Dongchao and Wu, Xixin and Zhang, Chen and Wu, Zhiyong and Wan, Pengfei and Meng, Helen},
+  journal = {arXiv preprint arXiv:2608.09571},
+  year    = {2026}
+}
