@@ -4,7 +4,7 @@
 
 [Project Page](https://caiyunrui.github.io/SonicWeave/)
 &nbsp;|&nbsp;
-[arXiv](ARXIV_LINK)
+[arXiv](https://arxiv.org/abs/2608.09571)
 
 SonicWeave is a unified flow-matching model for generating speech, singing,
 music, sound effects, and their fine-grained mixtures with a single set of
